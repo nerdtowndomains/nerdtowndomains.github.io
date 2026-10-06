@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nerdtown Games - Choose a link</title>
+<style>
+@font-face {
+    font-family: 'Coconutz';
+    src: url('Coconutz.ttf') format('truetype'); /* put Coconutz.ttf next to this file */
+    unicode-range: U+0000-007F;
+}
+:root { --bg:#f4f4f9; --card:#fff; --soft:#f9f9f9; --fg:#333; --muted:#666; --line:#ddd; --accent:#3498db; --hover:#e6effc; --shadow:rgba(0,0,0,.08); }
+@media (prefers-color-scheme: dark) {
+    :root { --bg:#1a1a1a; --card:#2a2a2a; --soft:#333; --fg:#e0e0e0; --muted:#aaa; --line:#444; --hover:#3d3d3d; --shadow:rgba(0,0,0,.4); }
+}
+* { box-sizing: border-box; }
+body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:32px 16px;
+    font-family:'Coconutz',Arial,sans-serif; background:var(--bg); color:var(--fg); }
+
+.page { width:100%; max-width:640px; }
+.hero { text-align:center; margin-bottom:26px; }
+.logo { display:block; margin:0 auto 16px; max-width:220px; max-height:140px; width:auto; height:auto; }
+.hero h1 { margin:0 0 10px; font-size:30px; }
+.hero p { margin:0 auto; max-width:520px; color:var(--muted); font-size:17px; line-height:1.5; }
+#summary { margin-top:12px; font-size:15px; color:var(--muted); min-height:1.2em; }
+
+.domain-list { display:flex; flex-direction:column; gap:12px; }
+.domain-card { display:flex; align-items:center; gap:16px; padding:16px 20px; background:var(--card); border:1px solid var(--line); border-radius:10px; box-shadow:0 2px 8px var(--shadow); }
+.domain-info { flex:1; min-width:0; }
+.domain-name { font-size:20px; word-break:break-all; }
+.tag { display:inline-block; margin-left:8px; padding:1px 9px; border-radius:999px; font-size:12px; color:#fff; background:var(--accent); vertical-align:middle; }
+.domain-msg { margin-top:4px; font-size:14px; color:var(--muted); }
+.status { flex:none; display:inline-flex; align-items:center; gap:7px; padding:5px 12px; border-radius:999px; font-size:14px; border:1px solid var(--line); background:var(--soft); color:var(--muted); }
+.status::before { content:''; width:9px; height:9px; border-radius:50%; background:#999; animation:pulse 1s ease-in-out infinite; }
+.domain-card.ok .status { background:#4CAF50; border-color:#4CAF50; color:#fff; }
+.domain-card.blocked .status { background:#c0392b; border-color:#c0392b; color:#fff; }
+.domain-card.ok .status::before, .domain-card.blocked .status::before { background:#fff; animation:none; }
+@keyframes pulse { 50% { opacity:.3; } }
+.visit { flex:none; display:inline-flex; align-items:center; height:36px; padding:0 16px; border:1px solid var(--line); border-radius:6px; color:var(--fg); text-decoration:none; font-size:16px; transition:background-color .15s ease; }
+.visit:hover { background:var(--hover); }
+.domain-card.blocked .visit { display:none; } 
+
+@media (max-width:560px) {
+    .domain-card { flex-wrap:wrap; }
+    .domain-info { flex:1 1 100%; }
+}
+</style>
+</head>
+<body>
+
+<main class="page">
+    <section class="hero">
+        <img class="logo" src="logo.png" alt="Nerdtown Games" onerror="this.style.display='none'"> <!-- put logo.png next to this file -->
+        <h1>Choose where to play</h1>
+        <p>Can't get on Nerdtown Games at your school or location? Try one of the links below. They all take you to the same games, so if one doesn't open, just pick another.</p>
+        <div id="summary">Checking which links work...</div>
+    </section>
+    <div class="domain-list" id="list"></div>
+</main>
+
+<script>
+/* ---- Edit this list to add or remove links ---- */
+var DOMAINS = [
+    { host: 'nerdtown.cc', main: true },
+    { host: 'ntg.ldtp.com' },
+    { host: 'ntg-7716.mashedpotates.com' }
+];
+var CHECK_PATH = '/auth/valid.json';   // must return {"valid":"yes"}
+var TIMEOUT_MS = 6000;
+
+var list = document.getElementById('list');
+var summary = document.getElementById('summary');
+var done = 0, okCount = 0;
+
+function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = text;
+    return n;
+}
+
+function setState(card, valid) {
+    card.classList.add(valid ? 'ok' : 'blocked');
+    card.querySelector('.status').textContent = valid ? 'Working' : 'Blocked';
+    card.querySelector('.domain-msg').textContent = valid ? 'This link is working.' : 'This link is blocked.';
+    done++;
+    if (valid) okCount++;
+    if (done === DOMAINS.length) {
+        summary.textContent = okCount === 0
+            ? 'None of the links are working right now. Please try again later.'
+            : okCount + ' of ' + DOMAINS.length + (DOMAINS.length === 1 ? ' link is working' : ' links are working');
+    }
+}
+
+DOMAINS.forEach(function (d) {
+    var card = el('div', 'domain-card');
+    var info = el('div', 'domain-info');
+    info.appendChild(el('span', 'domain-name', d.host));
+    if (d.main) info.appendChild(el('span', 'tag', 'Main'));
+    info.appendChild(el('div', 'domain-msg', 'Checking...'));
+    var status = el('span', 'status', 'Checking');
+    var visit = el('a', 'visit', 'Play');
+    visit.href = 'https://' + d.host + '/';
+    card.appendChild(info); card.appendChild(status); card.appendChild(visit);
+    list.appendChild(card);
+
+    /* Valid only if the domain answers {"valid":"yes"}. Errors, timeouts, CORS refusals and
+       any other answer all count as blocked. */
+    var ctrl = new AbortController();
+    var timer = setTimeout(function () { ctrl.abort(); }, TIMEOUT_MS);
+    fetch('https://' + d.host + CHECK_PATH, { cache: 'no-store', signal: ctrl.signal })
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function (j) { setState(card, j && j.valid === 'yes'); })
+        .catch(function () { setState(card, false); })
+        .finally(function () { clearTimeout(timer); });
+});
+</script>
+</body>
+</html>
